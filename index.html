@@ -1,3 +1,4 @@
+Index · HTML
 <!doctype html>
 <html lang="en">
 <head>
@@ -28,13 +29,13 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
 .mark{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:700;font-size:clamp(16px,1.6vw,22px);letter-spacing:.35em;text-transform:uppercase}
 .mark i{width:12px;height:12px;border-radius:50%;background:var(--mars);display:block}
-.mid{text-align:center;display:flex;flex-direction:column;align-items:center;transform:translateY(-6vh)}
+.mid{text-align:center;display:flex;flex-direction:column;align-items:center;transform:translateY(-9vh)}
 h1{margin:0;font-family:var(--display);font-weight:700;letter-spacing:-.03em;line-height:.98;text-wrap:balance;max-width:16ch;font-size:clamp(40px,7.2vw,118px)}
 .sub{font-size:clamp(14px,1.3vw,20px);color:var(--dust);max-width:46ch;margin:1em 0 0;line-height:1.45}
 footer{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
 footer a{color:inherit;pointer-events:auto;text-decoration:none;border-bottom:1px solid currentColor}
 footer a:focus-visible{outline:2px solid var(--mars);outline-offset:3px}
-@media (prefers-reduced-motion:reduce){canvas{display:none}body::after{content:"";position:fixed;left:0;right:0;top:68%;height:1px;background:var(--mars);opacity:.6}}
+@media (prefers-reduced-motion:reduce){canvas{display:none}body::after{content:"";position:fixed;left:0;right:0;top:78%;height:1px;background:var(--mars);opacity:.6}}
 </style>
 </head>
 <body>
@@ -51,12 +52,15 @@ footer a:focus-visible{outline:2px solid var(--mars);outline-offset:3px}
 (function(){
 if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 const c=document.getElementById('c'),ctx=c.getContext('2d');const DPR=Math.min(2,devicePixelRatio||1);
-let W,H,Y;
-function fit(){W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;Y=Math.round(H*.68)}
+let W,H,Y,speed,COL,N,ys,ts;
+const SECONDS_PER_PASS=5.5+Math.random()*2; // one crossing of the screen, chosen once per visit
+function fit(){W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;Y=Math.round(H*.78);speed=W/SECONDS_PER_PASS/1000;
+  COL=2*DPR;N=Math.ceil(W/COL)+1;ys=new Float32Array(N).fill(NaN);ts=new Float32Array(N)} // one trace column per 2px
 addEventListener('resize',fit);fit();
-
+ 
 /* The light moves continuously. Events are scheduled at random: a full heartbeat,
-   a small blip, a double beat, or a long quiet stretch. Nothing repeats exactly. */
+   a double beat, a small blip, or a dip, with quiet stretches between. Nothing repeats exactly.
+   Shape follows a real ECG: rounded P and T waves, sharp QRS spike. */
 const rnd=(a,b)=>a+Math.random()*(b-a);
 function pqrst(p,k){ // one complex, p 0..1, k = amplitude scale
   if(p<.06)return .10*k*Math.sin(p/.06*Math.PI);
@@ -70,32 +74,45 @@ function pqrst(p,k){ // one complex, p 0..1, k = amplitude scale
 function blip(p,k){return p<1?.18*k*Math.sin(p*Math.PI):0}
 let events=[]; // {start(px), len(px), fn, k}
 let next=0;    // x position where the next event is scheduled
+function amplitude(){return Math.min(H*rnd(.05,.09),90*DPR)} // never tall enough to reach the text
 function schedule(x){
   const gap=rnd(.18,.9)*W;              // quiet stretch before the event
   const start=x+gap;
   const r=Math.random();
-  const amp=H*rnd(.07,.13);
+  const amp=amplitude();
   if(r<.55)events.push({start,len:W*rnd(.14,.22),fn:pqrst,k:amp});
   else if(r<.75){const len=W*rnd(.13,.18);events.push({start,len,fn:pqrst,k:amp});events.push({start:start+len*.6,len:len*.9,fn:pqrst,k:amp*rnd(.6,.9)})}
   else if(r<.9)events.push({start,len:W*rnd(.04,.08),fn:blip,k:amp});
   else events.push({start,len:W*rnd(.05,.12),fn:blip,k:-amp*.5}); // a dip
   const last=events[events.length-1];next=last.start+last.len}
 function yAt(x){let y=Y;for(const e of events){const p=(x-e.start)/e.len;if(p>=0&&p<1)y-=e.fn(p,e.k)}return y}
-
-const SPEED=W/ rnd(5.5,7.5)/1000; // px per ms, set once
-let x=0,last=0,trail=[],speed=SPEED;
+ 
+let x=0,last=0,px=0;
 function draw(t){if(!last)last=t;const dt=Math.min(50,t-last);last=t;
-  x+=speed*dt;
-  if(x>W+W*.05){x=-W*.05;trail=[];events=events.filter(e=>e.start>W);events.forEach(e=>e.start-=W);next=Math.max(0,next-W)}
+  px=x;x+=speed*dt;
+  if(x>W+W*.05){x=-W*.05;px=x;events=events.filter(e=>e.start>W);events.forEach(e=>e.start-=W);next=Math.max(0,next-W)}
   while(next<W*1.3)schedule(next);
-  const y=yAt(x);trail.push({x,y,t});
+  const y=yAt(x);
+  // write the new trace into every column the light crossed this frame; the old pass stays until overwritten
+  for(let cx=Math.max(0,Math.floor(px/COL));cx<=Math.floor(x/COL)&&cx<N;cx++){const xx=cx*COL;ys[cx]=yAt(xx);ts[cx]=t}
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='rgba(193,68,14,0.42)';ctx.fillRect(0,Y,W,1.5*DPR);
-  // trace, fading with age so the far left softens as the light nears the right
-  ctx.lineWidth=1.8*DPR;ctx.lineJoin='round';
-  for(let i=1;i<trail.length;i++){const a=trail[i],b=trail[i-1];const age=(t-a.t)/9000;
-    ctx.strokeStyle=`rgba(193,68,14,${Math.max(.12,.92-age*.8)})`;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(a.x,a.y);ctx.stroke()}
-  ctx.fillStyle='rgba(11,11,16,0.55)';ctx.fillRect(Math.max(0,x),Y-2*DPR,W,5*DPR);
+  // trace: solid orange, drawn as continuous paths; only a soft window just ahead of the light fades out, like a monitor's sweep
+  const ERASE=W*.09,CHUNK=12;
+  ctx.lineWidth=1.8*DPR;ctx.lineJoin='round';ctx.lineCap='butt';
+  let i=0;
+  while(i<N){
+    if(ys[i]!==ys[i]){i++;continue}
+    // one path per run of columns sharing the same opacity band
+    const xx0=i*COL,ahead0=xx0-x;
+    const inGap=ahead0>0&&ahead0<ERASE;
+    let a=.92;if(inGap)a*=Math.min(1,(ahead0+CHUNK*COL*.5)/ERASE);
+    if(a<.02){i++;continue}
+    ctx.strokeStyle=`rgba(193,68,14,${a})`;ctx.beginPath();ctx.moveTo(xx0,ys[i]);
+    let j=i+1,limit=inGap?i+CHUNK:N;
+    for(;j<limit&&j<N&&ys[j]===ys[j];j++){ctx.lineTo(j*COL,ys[j]);const ah=j*COL-x;if(!inGap&&ah>0&&ah<ERASE)break}
+    ctx.stroke();
+    i=inGap?Math.max(j-1,i+1):Math.max(j,i+1)} // overlap one column so runs join without a seam
   const g=ctx.createRadialGradient(x,y,0,x,y,W*.10);g.addColorStop(0,'rgba(237,230,218,0.95)');g.addColorStop(.12,'rgba(224,106,58,0.85)');g.addColorStop(.5,'rgba(193,68,14,0.22)');g.addColorStop(1,'rgba(193,68,14,0)');
   ctx.fillStyle=g;ctx.fillRect(x-W*.10,y-W*.10,W*.20,W*.20);
   ctx.fillStyle='rgba(237,230,218,0.95)';ctx.beginPath();ctx.arc(x,y,2.2*DPR,0,6.283);ctx.fill();
@@ -105,3 +122,4 @@ requestAnimationFrame(draw);
 </script>
 </body>
 </html>
+ 
