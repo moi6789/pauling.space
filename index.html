@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pauling</title>
+<meta name="description" content="Surgery, anywhere humans go. The 720i, an autonomous operating room for every ship, rig, base and space colony. A concept.">
+<meta name="theme-color" content="#0B0B10">
+<meta property="og:title" content="Pauling">
+<meta property="og:description" content="Surgery, anywhere humans go. The 720i, an autonomous operating room for every ship, rig, base and space colony. A concept.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pauling.space/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Pauling">
+<meta name="twitter:description" content="Surgery, anywhere humans go. The 720i, an autonomous operating room for every ship, rig, base and space colony. A concept.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230B0B10'/%3E%3Ccircle cx='32' cy='32' r='14' fill='%23C1440E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=IBM+Plex+Sans:wght@400&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+:root{--ink:#0B0B10;--bone:#EDE6DA;--mars:#C1440E;--dust:#A89E90;--mute:#6E655A;
+  --display:'Space Grotesk',Arial,sans-serif;--body:'IBM Plex Sans',Arial,sans-serif;--mono:'IBM Plex Mono',monospace;color-scheme:dark}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.ui{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;
+  padding-top:max(32px,env(safe-area-inset-top,0px));padding-bottom:max(32px,env(safe-area-inset-bottom,0px));
+  padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.mark{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:700;font-size:clamp(16px,1.6vw,22px);letter-spacing:.35em;text-transform:uppercase}
+.mark i{width:12px;height:12px;border-radius:50%;background:var(--mars);display:block}
+.mid{text-align:center;display:flex;flex-direction:column;align-items:center;transform:translateY(-6vh)}
+h1{margin:0;font-family:var(--display);font-weight:700;letter-spacing:-.03em;line-height:.98;text-wrap:balance;max-width:16ch;font-size:clamp(40px,7.2vw,118px)}
+.sub{font-size:clamp(14px,1.3vw,20px);color:var(--dust);max-width:46ch;margin:1em 0 0;line-height:1.45}
+footer{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+footer a{color:inherit;pointer-events:auto;text-decoration:none;border-bottom:1px solid currentColor}
+footer a:focus-visible{outline:2px solid var(--mars);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){canvas{display:none}body::after{content:"";position:fixed;left:0;right:0;top:68%;height:1px;background:var(--mars);opacity:.6}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<div class="ui">
+  <div class="mark"><i></i>Pauling</div>
+  <div class="mid">
+    <h1>Surgery, anywhere humans go.</h1>
+    <p class="sub">The 720i. An autonomous operating room for every ship, rig, base and space colony.</p>
+  </div>
+  <footer><span>2026 · CC BY 4.0</span><a href="https://www.moises.sh/log/004">Concept by moises.sh</a></footer>
+</div>
+<script>
+(function(){
+if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+const c=document.getElementById('c'),ctx=c.getContext('2d');const DPR=Math.min(2,devicePixelRatio||1);
+let W,H,Y;
+function fit(){W=c.width=innerWidth*DPR;H=c.height=innerHeight*DPR;Y=Math.round(H*.68)}
+addEventListener('resize',fit);fit();
+
+/* The light moves continuously. Events are scheduled at random: a full heartbeat,
+   a small blip, a double beat, or a long quiet stretch. Nothing repeats exactly. */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function pqrst(p,k){ // one complex, p 0..1, k = amplitude scale
+  if(p<.06)return .10*k*Math.sin(p/.06*Math.PI);
+  if(p<.10)return -.14*k*((p-.06)/.04);
+  if(p<.16)return (-.14+1.14*((p-.10)/.06))*k;
+  if(p<.22)return (1-1.38*((p-.16)/.06))*k;
+  if(p<.27)return (-.38+.38*((p-.22)/.05))*k;
+  if(p<.42)return 0;
+  if(p<.56)return .24*k*Math.sin((p-.42)/.14*Math.PI);
+  return 0}
+function blip(p,k){return p<1?.18*k*Math.sin(p*Math.PI):0}
+let events=[]; // {start(px), len(px), fn, k}
+let next=0;    // x position where the next event is scheduled
+function schedule(x){
+  const gap=rnd(.18,.9)*W;              // quiet stretch before the event
+  const start=x+gap;
+  const r=Math.random();
+  const amp=H*rnd(.07,.13);
+  if(r<.55)events.push({start,len:W*rnd(.14,.22),fn:pqrst,k:amp});
+  else if(r<.75){const len=W*rnd(.13,.18);events.push({start,len,fn:pqrst,k:amp});events.push({start:start+len*.6,len:len*.9,fn:pqrst,k:amp*rnd(.6,.9)})}
+  else if(r<.9)events.push({start,len:W*rnd(.04,.08),fn:blip,k:amp});
+  else events.push({start,len:W*rnd(.05,.12),fn:blip,k:-amp*.5}); // a dip
+  const last=events[events.length-1];next=last.start+last.len}
+function yAt(x){let y=Y;for(const e of events){const p=(x-e.start)/e.len;if(p>=0&&p<1)y-=e.fn(p,e.k)}return y}
+
+const SPEED=W/ rnd(5.5,7.5)/1000; // px per ms, set once
+let x=0,last=0,trail=[],speed=SPEED;
+function draw(t){if(!last)last=t;const dt=Math.min(50,t-last);last=t;
+  x+=speed*dt;
+  if(x>W+W*.05){x=-W*.05;trail=[];events=events.filter(e=>e.start>W);events.forEach(e=>e.start-=W);next=Math.max(0,next-W)}
+  while(next<W*1.3)schedule(next);
+  const y=yAt(x);trail.push({x,y,t});
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(193,68,14,0.42)';ctx.fillRect(0,Y,W,1.5*DPR);
+  // trace, fading with age so the far left softens as the light nears the right
+  ctx.lineWidth=1.8*DPR;ctx.lineJoin='round';
+  for(let i=1;i<trail.length;i++){const a=trail[i],b=trail[i-1];const age=(t-a.t)/9000;
+    ctx.strokeStyle=`rgba(193,68,14,${Math.max(.12,.92-age*.8)})`;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(a.x,a.y);ctx.stroke()}
+  ctx.fillStyle='rgba(11,11,16,0.55)';ctx.fillRect(Math.max(0,x),Y-2*DPR,W,5*DPR);
+  const g=ctx.createRadialGradient(x,y,0,x,y,W*.10);g.addColorStop(0,'rgba(237,230,218,0.95)');g.addColorStop(.12,'rgba(224,106,58,0.85)');g.addColorStop(.5,'rgba(193,68,14,0.22)');g.addColorStop(1,'rgba(193,68,14,0)');
+  ctx.fillStyle=g;ctx.fillRect(x-W*.10,y-W*.10,W*.20,W*.20);
+  ctx.fillStyle='rgba(237,230,218,0.95)';ctx.beginPath();ctx.arc(x,y,2.2*DPR,0,6.283);ctx.fill();
+  requestAnimationFrame(draw)}
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
